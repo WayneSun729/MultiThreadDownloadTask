@@ -1,3 +1,4 @@
 <resources>
-    <string name="app_name">My Application</string>
+    <string name="app_name">MultiThreadDownloadTask</string>
+    <string name="message">您将使用数个线程下载该文件，请您设置线程数量（1–5）</string>
 </resources>
