@@ -6,12 +6,16 @@ import androidx.appcompat.app.AppCompatActivity;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.text.style.UpdateAppearance;
 import android.util.Log;
 import android.widget.TextView;
 
 import org.jetbrains.annotations.NotNull;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Objects;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
@@ -22,6 +26,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import okhttp3.Call;
+import okhttp3.Callback;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
@@ -35,7 +40,12 @@ public class DownloadActivity extends AppCompatActivity {
 
     private String responseData;
 
-    private final int updateText = 1;
+    private final int UPDATE_TEXT = 1;
+
+    private final int DOWNLOAD_SUCCESS = 2;
+
+    private final int DOWNLOAD_FAIL = 3;
+
 
     private static ExecutorService threadPoolExecutor = new ThreadPoolExecutor(
             3,
@@ -50,8 +60,14 @@ public class DownloadActivity extends AppCompatActivity {
         @Override
         public void handleMessage(@NonNull @NotNull Message msg) {
             switch (msg.what){
-                case updateText:
+                case UPDATE_TEXT:
                     showResponse(responseData);
+                    break;
+                case DOWNLOAD_SUCCESS:
+                    showResponse("下载成功");
+                    break;
+                case DOWNLOAD_FAIL:
+                    showResponse("下载失败");
                     break;
                 default:
                     break;
@@ -67,14 +83,57 @@ public class DownloadActivity extends AppCompatActivity {
         threadPoolExecutor.execute(new Runnable() {
             @Override
             public void run() {
+                download();
+//                try {
+//                    sendRequestWithOkhttp();
+//                } catch (IOException e) {
+//                    e.printStackTrace();
+//                }
+            }
+        });
+    }
+
+    private void download() {
+        String url = "https://downloads.gradle-dn.com/distributions/gradle-6.7.1-bin.zip";
+        String fileName = "TARGET_FILE";
+        String filesDirPath = getFilesDir().getPath();
+        OkHttpClient okHttpClient = new OkHttpClient();
+        Request request = new Request.Builder()
+                .get()
+                .url(url)
+                .build();
+        Call call = okHttpClient.newCall(request);
+
+        call.enqueue(new Callback() {
+            @Override
+            public void onFailure(@NotNull Call call, @NotNull IOException e) {
+                //
+                sendMessage(DOWNLOAD_FAIL);
+            }
+
+            @Override
+            public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
+                // Log.d(TAG, "onResponse.");
+
+                InputStream inputStream = Objects.requireNonNull(response.body()).byteStream();
+                File target = new File(filesDirPath, fileName);
+                FileOutputStream fileOutputStream = new FileOutputStream(target);
+
                 try {
-                    sendRequestWithOkhttp();
+                    byte[] buffer = new byte[2048];
+                    int len;
+                    while ((len = inputStream.read(buffer)) != -1) {
+                        fileOutputStream.write(buffer, 0, len);
+                        // Log.d(TAG, "read: " + len);
+                    }
+                    fileOutputStream.flush();
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
+                sendMessage(DOWNLOAD_SUCCESS);
             }
         });
-        threadPoolExecutor.shutdown();
+
     }
 
     private void sendRequestWithOkhttp() throws IOException {
@@ -87,12 +146,13 @@ public class DownloadActivity extends AppCompatActivity {
             responseData = response.body().string();
             Log.d("Wayne", responseData);
         }
+        sendMessage(UPDATE_TEXT);
+    }
 
-            Message msg = new Message();
-            msg.what = updateText;
-            handler.sendMessage(msg);
-
-
+    private void sendMessage(int flag){
+        Message msg = new Message();
+        msg.what = flag;
+        handler.sendMessage(msg);
     }
 
     private void showResponse(String responseData) {
@@ -100,4 +160,9 @@ public class DownloadActivity extends AppCompatActivity {
     }
 
 
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        threadPoolExecutor.shutdown();
+    }
 }

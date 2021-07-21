@@ -1,5 +1,7 @@
 package com.wayne.myapplication;
 
+import android.util.Log;
+
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -14,7 +16,7 @@ public class DownloadThreadFactory implements ThreadFactory {
     @Override
     public Thread newThread(Runnable r) {
         Thread t = new Thread(r, "download-thread-" + atomicInteger.getAndIncrement());
-        System.out.println(t.getName() + " has been created");
+        Log.d("Wayne",t.getName() + " has been created");
         return t;
     }
 }
