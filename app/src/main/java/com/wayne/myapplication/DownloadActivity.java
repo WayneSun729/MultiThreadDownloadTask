@@ -40,11 +40,15 @@ public class DownloadActivity extends AppCompatActivity {
 
     private String responseData;
 
+    private String TAG = "Wayne";
+
     private final int UPDATE_TEXT = 1;
 
     private final int DOWNLOAD_SUCCESS = 2;
 
     private final int DOWNLOAD_FAIL = 3;
+
+    private double numProgress = 0;
 
 
     private static ExecutorService threadPoolExecutor = new ThreadPoolExecutor(
@@ -69,6 +73,8 @@ public class DownloadActivity extends AppCompatActivity {
                 case DOWNLOAD_FAIL:
                     showResponse("下载失败");
                     break;
+                case 4:
+                    showResponse(String.valueOf(numProgress));
                 default:
                     break;
             }
@@ -118,13 +124,19 @@ public class DownloadActivity extends AppCompatActivity {
                 InputStream inputStream = Objects.requireNonNull(response.body()).byteStream();
                 File target = new File(filesDirPath, fileName);
                 FileOutputStream fileOutputStream = new FileOutputStream(target);
+                long total = Objects.requireNonNull(response.body()).contentLength();
+//                Log.d(TAG, String.valueOf(response.body().contentLength()));
 
                 try {
                     byte[] buffer = new byte[2048];
                     int len;
+                    long sum = 0;
                     while ((len = inputStream.read(buffer)) != -1) {
                         fileOutputStream.write(buffer, 0, len);
-                        // Log.d(TAG, "read: " + len);
+                        sum+=len;
+                        numProgress = (double) sum/total;
+                        sendMessage(4);
+//                         Log.d(TAG, "read: " + len);
                     }
                     fileOutputStream.flush();
                 } catch (IOException e) {
@@ -144,7 +156,7 @@ public class DownloadActivity extends AppCompatActivity {
         Response response = okHttpClient.newCall(request).execute();
         if (response.body() != null){
             responseData = response.body().string();
-            Log.d("Wayne", responseData);
+            Log.d(TAG, responseData);
         }
         sendMessage(UPDATE_TEXT);
     }
