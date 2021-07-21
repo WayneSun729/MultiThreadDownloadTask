@@ -8,6 +8,7 @@ import android.os.Handler;
 import android.os.Message;
 import android.text.style.UpdateAppearance;
 import android.util.Log;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import org.jetbrains.annotations.NotNull;
@@ -16,6 +17,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.text.DecimalFormat;
 import java.util.Objects;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
@@ -48,8 +50,11 @@ public class DownloadActivity extends AppCompatActivity {
 
     private final int DOWNLOAD_FAIL = 3;
 
-    private double numProgress = 0;
+    private final int DOWNLOAD_PROGRESS = 4;
 
+    private int numProgress = 0;
+
+    private ProgressBar progressBar;
 
     private static ExecutorService threadPoolExecutor = new ThreadPoolExecutor(
             3,
@@ -73,8 +78,9 @@ public class DownloadActivity extends AppCompatActivity {
                 case DOWNLOAD_FAIL:
                     showResponse("下载失败");
                     break;
-                case 4:
+                case DOWNLOAD_PROGRESS:
                     showResponse(String.valueOf(numProgress));
+                    progressBar.setProgress(numProgress);
                 default:
                     break;
             }
@@ -86,6 +92,7 @@ public class DownloadActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_download);
         textView = findViewById(R.id.textView);
+        progressBar = findViewById(R.id.progressBar);
         threadPoolExecutor.execute(new Runnable() {
             @Override
             public void run() {
@@ -134,8 +141,11 @@ public class DownloadActivity extends AppCompatActivity {
                     while ((len = inputStream.read(buffer)) != -1) {
                         fileOutputStream.write(buffer, 0, len);
                         sum+=len;
-                        numProgress = (double) sum/total;
-                        sendMessage(4);
+                        double temp = (double) sum/total;
+                        temp*=10000;
+//                        Log.d(TAG, String.valueOf((int)temp));
+                        numProgress = (int) temp;
+                        sendMessage(DOWNLOAD_PROGRESS);
 //                         Log.d(TAG, "read: " + len);
                     }
                     fileOutputStream.flush();
