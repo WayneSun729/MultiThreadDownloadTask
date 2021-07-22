@@ -79,7 +79,10 @@ public class DownloadActivity extends AppCompatActivity {
                     showResponse("下载失败");
                     break;
                 case DOWNLOAD_PROGRESS:
-                    showResponse(String.valueOf(numProgress));
+                    StringBuilder sb = new StringBuilder();
+                    double numPro = (double) numProgress/100;
+                    sb.append(numPro).append("%");
+                    showResponse(sb.toString());
                     progressBar.setProgress(numProgress);
                 default:
                     break;

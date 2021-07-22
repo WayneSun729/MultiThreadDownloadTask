@@ -5,9 +5,7 @@ import android.util.Log;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
 
-/**
- * @author 11271
- */
+
 public class DownloadThreadFactory implements ThreadFactory {
 
     //通过计数器，可以更好的管理线程
