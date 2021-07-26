@@ -1,19 +1,5 @@
 package com.wayne.myapplication;
 
-import org.jetbrains.annotations.NotNull;
-
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.Objects;
-
-import okhttp3.Call;
-import okhttp3.Callback;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.Response;
-
 /**
  * @author sunbowen
  */
