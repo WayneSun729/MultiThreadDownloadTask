@@ -118,10 +118,13 @@ public class DownloadActivity extends AppCompatActivity {
                 }
                 if (DataManager.getFileSize() == 0) {
                     sendMessage(DOWNLOAD_FAIL);
-                }else if (DataManager.getFileSize() == DataManager.getDownloadLength()){
+                }else if (DataManager.getFileSize() == DataManager.getDownloadLength()-1 ){
                     sendMessage(DOWNLOAD_SUCCESS);
+                }else {
+                    Log.d(TAG, "下载文件大小"+DataManager.getFileSize());
+                    Log.d(TAG, "本地文件大小"+DataManager.getDownloadLength());
+                    download(file);
                 }
-                download(file);
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -181,8 +184,9 @@ public class DownloadActivity extends AppCompatActivity {
                     e.printStackTrace();
                 }
             }
-        });
+    });
     }
+
     private void sendMessage(int what){
         Message msg = new Message();
         msg.what = what;
@@ -238,6 +242,7 @@ public class DownloadActivity extends AppCompatActivity {
 
     class MyHandler extends Handler {
         int id;
+        int nowProgress;
 
         @Override
         public void handleMessage(@NonNull @NotNull Message msg) {
@@ -255,10 +260,10 @@ public class DownloadActivity extends AppCompatActivity {
                         break;
                     case DOWNLOAD_PROGRESS:
                         StringBuilder sb = new StringBuilder();
-                        double numPro = (double) numProgress/100;
+                        double numPro = (double) nowProgress/100;
                         sb.append(numPro).append("%");
                         viewHolder.progressTextView.setText(sb.toString());
-                        viewHolder.progressBar.setProgress(numProgress);
+                        viewHolder.progressBar.setProgress(nowProgress);
                     default:
                         break;
                 }
@@ -270,6 +275,10 @@ public class DownloadActivity extends AppCompatActivity {
 
         public void setId(int id) {
             this.id = id;
+        }
+
+        public void setNowProgress(int nowProgress){
+            this.nowProgress = nowProgress;
         }
     }
 

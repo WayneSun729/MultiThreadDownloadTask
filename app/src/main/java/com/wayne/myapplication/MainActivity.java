@@ -26,6 +26,7 @@ public class MainActivity extends AppCompatActivity {
         EditText etThreadNum = findViewById(R.id.et_threadNum);
         downloadButton.setOnClickListener(v -> {
             String url = "https://downloads.gradle-dn.com/distributions/gradle-7.0.2-bin.zip";
+            String url2 = "https://vd4.bdstatic.com/mda-kht238a6vyvvt5zf/sc/mda-kht238a6vyvvt5zf.mp4?v_from_s=hkapp-haokan-hnb&auth_key=1627825887-0-0-0b004db0845eebaaaef05cefb8187d0d&bcevod_channel=searchbox_feed&pd=1&pt=3&abtest=3000156_1";
             DataManager.setThreadNum(Integer.parseInt(etThreadNum.getText().toString()));
             DataManager.setURL(url);
             DataManager.setSavePath(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).getPath());

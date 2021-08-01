@@ -58,13 +58,13 @@ public class DownloadThread extends Thread{
     /**当前时间*/
     private long curTime;
 
-    private Handler handler ;
+    private DownloadActivity.MyHandler handler ;
 
     /**
      * 下载的构造函数
      * @param handler   UI更新
      */
-    public DownloadThread(Handler handler, long blockSize, int ThreadNo, File targetFile) throws InterruptedException {
+    public DownloadThread(DownloadActivity.MyHandler handler, long blockSize, int ThreadNo, File targetFile) throws InterruptedException {
         this.handler = handler;
         this.blockSize = blockSize;
         this.ThreadNo = ThreadNo;
@@ -97,19 +97,30 @@ public class DownloadThread extends Thread{
                 RandomAccessFile rAccessFile = new RandomAccessFile(file, "rwd");//读写
                 BufferedInputStream bis = new BufferedInputStream(Objects.requireNonNull(response.body()).byteStream(), BUFF_SIZE);
                 try {
+                    long sum = 0;
+                    long total;
+                    if (ThreadNo != DataManager.getThreadNum()-1){
+                        total = blockSize;
+                    }else{
+                        total = DataManager.getFileSize() - downloadSize;
+                    }
                     //设置从什么位置开始写入数据
                     rAccessFile.seek(startPosition);
                     curPosition = startPosition;
                     while (curPosition < endPosition)  //当前位置小于结束位置  继续下载
                     {
                         int len = bis.read(buf, 0, BUFF_SIZE);
-                        if (len == -1)   //下载完成
-                        {
+                        if (len == -1) {  //下载完成
                             break;
                         }
                         rAccessFile.write(buf, 0, len);
                         curPosition = curPosition + len;
-                        if (curPosition > endPosition) {    //如果下载多了，则减去多余部分
+                        sum+=len;
+                        double temp = (double) sum/total;
+                        temp*=10000;
+                        handler.setNowProgress((int) temp);
+                        sendMessage(DataManager.getDownloadProgress());
+                        if (curPosition >= endPosition) {    //如果下载多了，则减去多余部分
                             System.out.println("  curPosition > endPosition  !!!!");
                             long extraLen = curPosition - endPosition;
                             downloadSize += (len - extraLen + 1);
