@@ -1,5 +1,5 @@
 <resources>
     <string name="app_name">MultiThreadDownloadTask</string>
     <string name="message">您将使用数个线程下载该文件，请您设置线程数量（1–5）与下载地址</string>
-    <string name="downloadUrl">https://downloads.gradle-dn.com/distributions/gradle-6.7.1-bin.zip</string>
+    <string name="downloadUrl">下载链接</string>
 </resources>

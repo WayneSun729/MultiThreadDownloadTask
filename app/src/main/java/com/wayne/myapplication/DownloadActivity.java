@@ -114,14 +114,16 @@ public class DownloadActivity extends AppCompatActivity {
             }
         };
 
-        long fileSize = DataManager.getFileSize();
+        DataManager.setFileSize(getContentLength(DataManager.getURL()));
+
+        fileSize = DataManager.getFileSize();
         //只创建一个文件，file下载内容
-        File file = new File(DataManager.getSavePath() + DataManager.getFileName());
+        File file = new File(DataManager.getSavePath() +  DataManager.getFileName());
         Log.e(TAG, "文件一共：" + fileSize + " savePath " + DataManager.getSavePath() + "  fileName  " + DataManager.getFileName());
         if (file.exists()){
             DataManager.setDownloadLength(file.length());
         }
-        DataManager.setFileSize(getContentLength(DataManager.getURL()));
+
         if (DataManager.getFileSize() == 0) {
             sendMessage(DOWNLOAD_FAIL);
         }else if (DataManager.getFileSize() == DataManager.getDownloadLength()){

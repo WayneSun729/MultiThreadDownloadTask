@@ -25,10 +25,11 @@ public class MainActivity extends AppCompatActivity {
         EditText etDownloadUrl = findViewById(R.id.et_downloadUrl);
         EditText etThreadNum = findViewById(R.id.et_threadNum);
         downloadButton.setOnClickListener(v -> {
+            String url = "https://downloads.gradle-dn.com/distributions/gradle-7.0.2-bin.zip";
             DataManager.setThreadNum(Integer.parseInt(etThreadNum.getText().toString()));
-            DataManager.setURL(etDownloadUrl.getText().toString());
+            DataManager.setURL(url);
             DataManager.setSavePath(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).getPath());
-            DataManager.setFileName(DataManager.getURL().substring(DataManager.getURL().lastIndexOf("/")));
+            DataManager.setFileName(url.substring(url.lastIndexOf("/")));
             Intent downloadActivityIntent = new Intent(this, DownloadActivity.class);
             startActivity(downloadActivityIntent);
         });
