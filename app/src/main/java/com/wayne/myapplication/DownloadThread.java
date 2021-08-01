@@ -119,6 +119,9 @@ public class DownloadThread extends Thread{
                     }
                     finished = true;  //当前阶段下载完成
                     Log.e(TAG, "当前线程" + ThreadNo + "下载完成");
+                    if (ThreadNo==4){
+                        sendMessage(DataManager.getUpdateText());
+                    }
                 } catch (Exception e) {
                     Log.e(TAG, "download error Exception " + e.getMessage());
                     e.printStackTrace();
@@ -133,9 +136,7 @@ public class DownloadThread extends Thread{
                 }
             }
         });
-        if (ThreadNo==4){
-            sendMessage(DataManager.getDownloadSuccess());
-        }
+
     }
 
 

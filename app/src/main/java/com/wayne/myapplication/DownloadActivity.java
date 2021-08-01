@@ -1,9 +1,5 @@
 package com.wayne.myapplication;
 
-import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
-
 import android.Manifest;
 import android.app.Activity;
 import android.content.pm.PackageManager;
@@ -11,36 +7,35 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.os.StrictMode;
-import android.text.style.UpdateAppearance;
 import android.util.Log;
+import android.widget.Button;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.widget.Toast;
+
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.RandomAccessFile;
-import java.net.URL;
-import java.text.DecimalFormat;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-
-import javax.sql.DataSource;
 
 import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
-import okhttp3.Request.Builder;
 import okhttp3.Response;
 
 /**
@@ -72,6 +67,28 @@ public class DownloadActivity extends AppCompatActivity {
 
     private ProgressBar progressBar;
 
+    private File file;
+
+    private List<MyHandler> myHandlerList = new ArrayList<>();
+
+    private Handler handler = new Handler(){
+        @Override
+        public void handleMessage(@NonNull @NotNull Message msg) {
+            switch (msg.what){
+                case DOWNLOAD_SUCCESS:
+                    showResponse("下载成功");
+                    break;
+                case DOWNLOAD_FAIL:
+                    showResponse("下载失败");
+                    break;
+                default:
+                    break;
+            }
+        }
+    };
+
+    RecyclerView recyclerView;
+
     private static final ExecutorService threadPoolExecutor = new ThreadPoolExecutor(
             DataManager.getThreadNum(),
             DataManager.getThreadNum(),
@@ -81,59 +98,54 @@ public class DownloadActivity extends AppCompatActivity {
             new DownloadThreadFactory(),
             new ThreadPoolExecutor.AbortPolicy());
 
-    private Handler handler;
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_download);
         textView = findViewById(R.id.textView);
         progressBar = findViewById(R.id.progressBar);
-        handler = new Handler(){
-            @Override
-            public void handleMessage(@NonNull @NotNull Message msg) {
-                switch (msg.what){
-                    case UPDATE_TEXT:
-                        showResponse(responseData);
-                        break;
-                    case DOWNLOAD_SUCCESS:
-                        showResponse("下载成功");
-                        break;
-                    case DOWNLOAD_FAIL:
-                        showResponse("下载失败");
-                        break;
-                    case DOWNLOAD_PROGRESS:
-                        StringBuilder sb = new StringBuilder();
-                        double numPro = (double) numProgress/100;
-                        sb.append(numPro).append("%");
-                        showResponse(sb.toString());
-                        progressBar.setProgress(numProgress);
-                    default:
-                        break;
+
+        Button btnStart = findViewById(R.id.btn_start);
+        btnStart.setOnClickListener(v ->{
+            try {
+                DataManager.setFileSize(getContentLength(DataManager.getURL()));
+                fileSize = DataManager.getFileSize();
+                //只创建一个文件，file下载内容
+                file = new File(DataManager.getSavePath() +  DataManager.getFileName());
+                Log.e(TAG, "文件一共：" + fileSize + " savePath " + DataManager.getSavePath() + "  fileName  " + DataManager.getFileName());
+                if (file.exists()){
+                    DataManager.setDownloadLength(file.length());
                 }
+                if (DataManager.getFileSize() == 0) {
+                    sendMessage(DOWNLOAD_FAIL);
+                }else if (DataManager.getFileSize() == DataManager.getDownloadLength()){
+                    sendMessage(DOWNLOAD_SUCCESS);
+                }
+                download(file);
+            } catch (IOException e) {
+                e.printStackTrace();
             }
-        };
+        });
+        recyclerView = findViewById(R.id.recyclerView);
+        LinearLayoutManager layoutManager = new LinearLayoutManager(this);
+        recyclerView.setLayoutManager(layoutManager);
+        DownloadThreadAdapter downloadThreadAdapter = new DownloadThreadAdapter();
+        recyclerView.setAdapter(downloadThreadAdapter);
 
-        DataManager.setFileSize(getContentLength(DataManager.getURL()));
+        initMyHandlerList();
+    }
 
-        fileSize = DataManager.getFileSize();
-        //只创建一个文件，file下载内容
-        File file = new File(DataManager.getSavePath() +  DataManager.getFileName());
-        Log.e(TAG, "文件一共：" + fileSize + " savePath " + DataManager.getSavePath() + "  fileName  " + DataManager.getFileName());
-        if (file.exists()){
-            DataManager.setDownloadLength(file.length());
+    private void initMyHandlerList() {
+        for (int i = 0; i < DataManager.getThreadNum(); i++) {
+            MyHandler handler = new MyHandler();
+            handler.setId(i);
+            myHandlerList.add(handler);
         }
+    }
 
-        if (DataManager.getFileSize() == 0) {
-            sendMessage(DOWNLOAD_FAIL);
-        }else if (DataManager.getFileSize() == DataManager.getDownloadLength()){
-            sendMessage(DOWNLOAD_SUCCESS);
-        }
-        try {
-            download(file);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+    @Override
+    protected void onResume() {
+        super.onResume();
     }
 
     private void download(File file) throws IOException{
@@ -162,11 +174,9 @@ public class DownloadActivity extends AppCompatActivity {
                 blockSize = ((fileSize % threadNum) == 0) ? (fileSize / threadNum) : (fileSize / threadNum + 1);
                 Log.e(TAG, "每个线程分别下载 ：" + blockSize);
                 try {
-                    threadPoolExecutor.execute(new DownloadThread(handler,blockSize,0,file));
-                    threadPoolExecutor.execute(new DownloadThread(handler,blockSize,1,file));
-                    threadPoolExecutor.execute(new DownloadThread(handler,blockSize,2,file));
-                    threadPoolExecutor.execute(new DownloadThread(handler,blockSize,3,file));
-                    threadPoolExecutor.execute(new DownloadThread(handler,blockSize,4,file));
+                    for (int i = 0; i < DataManager.getThreadNum(); i++) {
+                        threadPoolExecutor.execute(new DownloadThread(myHandlerList.get(i),blockSize,i,file));
+                    }
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
@@ -225,4 +235,42 @@ public class DownloadActivity extends AppCompatActivity {
                     REQUEST_EXTERNAL_STORAGE);
         }
     }
+
+    class MyHandler extends Handler {
+        int id;
+
+        @Override
+        public void handleMessage(@NonNull @NotNull Message msg) {
+            DownloadThreadAdapter.ViewHolder viewHolder = (DownloadThreadAdapter.ViewHolder) recyclerView.findViewHolderForAdapterPosition(id);
+            try {
+                switch (msg.what){
+                    case UPDATE_TEXT:
+                        showResponse("下载完成");
+                        break;
+                    case DOWNLOAD_SUCCESS:
+                        viewHolder.progressTextView.setText("下载成功");
+                        break;
+                    case DOWNLOAD_FAIL:
+                        viewHolder.progressTextView.setText("下载失败");
+                        break;
+                    case DOWNLOAD_PROGRESS:
+                        StringBuilder sb = new StringBuilder();
+                        double numPro = (double) numProgress/100;
+                        sb.append(numPro).append("%");
+                        viewHolder.progressTextView.setText(sb.toString());
+                        viewHolder.progressBar.setProgress(numProgress);
+                    default:
+                        break;
+                }
+            }catch (NullPointerException id){
+                Toast.makeText(getApplicationContext(), "出错了。。", Toast.LENGTH_SHORT).show();
+            }
+
+        }
+
+        public void setId(int id) {
+            this.id = id;
+        }
+    }
+
 }
