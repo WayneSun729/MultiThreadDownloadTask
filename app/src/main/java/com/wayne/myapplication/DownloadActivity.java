@@ -2,10 +2,15 @@ package com.wayne.myapplication;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
 
+import android.Manifest;
+import android.app.Activity;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.os.StrictMode;
 import android.text.style.UpdateAppearance;
 import android.util.Log;
 import android.widget.ProgressBar;
@@ -18,6 +23,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.RandomAccessFile;
+import java.net.URL;
 import java.text.DecimalFormat;
 import java.util.Objects;
 import java.util.concurrent.Executor;
@@ -28,10 +34,13 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import javax.sql.DataSource;
+
 import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
+import okhttp3.Request.Builder;
 import okhttp3.Response;
 
 /**
@@ -104,14 +113,28 @@ public class DownloadActivity extends AppCompatActivity {
                 }
             }
         };
+
+        long fileSize = DataManager.getFileSize();
+        //只创建一个文件，file下载内容
+        File file = new File(DataManager.getSavePath() + DataManager.getFileName());
+        Log.e(TAG, "文件一共：" + fileSize + " savePath " + DataManager.getSavePath() + "  fileName  " + DataManager.getFileName());
+        if (file.exists()){
+            DataManager.setDownloadLength(file.length());
+        }
+        DataManager.setFileSize(getContentLength(DataManager.getURL()));
+        if (DataManager.getFileSize() == 0) {
+            sendMessage(DOWNLOAD_FAIL);
+        }else if (DataManager.getFileSize() == DataManager.getDownloadLength()){
+            sendMessage(DOWNLOAD_SUCCESS);
+        }
         try {
-            download();
+            download(file);
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    private void download() throws IOException{
+    private void download(File file) throws IOException{
         OkHttpClient okHttpClient = new OkHttpClient();
         Request request = new Request.Builder()
                 .get()
@@ -122,18 +145,14 @@ public class DownloadActivity extends AppCompatActivity {
         call.enqueue(new Callback() {
             @Override
             public void onFailure(@NotNull Call call, @NotNull IOException e) {
-                //
                 sendMessage(DOWNLOAD_FAIL);
             }
 
             @Override
             public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
                 DataManager.setFileSize(Objects.requireNonNull(response.body()).contentLength());
-                long fileSize = DataManager.getFileSize();
-                //只创建一个文件，saveFile下载内容
-                File saveFile = new File(DataManager.getSavePath() + "/" + DataManager.getFileName());
-                Log.e(TAG, "文件一共：" + fileSize + " savePath " + DataManager.getSavePath() + "  fileName  " + DataManager.getFileName());
-                RandomAccessFile accessFile = new RandomAccessFile(saveFile, "rwd");
+                verifyStoragePermissions(DownloadActivity.this);
+                RandomAccessFile accessFile = new RandomAccessFile(file, "rwd");
                 //设置本地文件的长度和下载文件相同
                 accessFile.setLength(DataManager.getFileSize());
                 accessFile.close();
@@ -141,11 +160,11 @@ public class DownloadActivity extends AppCompatActivity {
                 blockSize = ((fileSize % threadNum) == 0) ? (fileSize / threadNum) : (fileSize / threadNum + 1);
                 Log.e(TAG, "每个线程分别下载 ：" + blockSize);
                 try {
-                    threadPoolExecutor.execute(new DownloadThread(handler,blockSize,0,saveFile));
-                    threadPoolExecutor.execute(new DownloadThread(handler,blockSize,1,saveFile));
-                    threadPoolExecutor.execute(new DownloadThread(handler,blockSize,2,saveFile));
-                    threadPoolExecutor.execute(new DownloadThread(handler,blockSize,3,saveFile));
-                    threadPoolExecutor.execute(new DownloadThread(handler,blockSize,4,saveFile));
+                    threadPoolExecutor.execute(new DownloadThread(handler,blockSize,0,file));
+                    threadPoolExecutor.execute(new DownloadThread(handler,blockSize,1,file));
+                    threadPoolExecutor.execute(new DownloadThread(handler,blockSize,2,file));
+                    threadPoolExecutor.execute(new DownloadThread(handler,blockSize,3,file));
+                    threadPoolExecutor.execute(new DownloadThread(handler,blockSize,4,file));
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
@@ -166,5 +185,42 @@ public class DownloadActivity extends AppCompatActivity {
     protected void onDestroy() {
         super.onDestroy();
         threadPoolExecutor.shutdown();
+    }
+
+    private long getContentLength(String downloadUrl){
+        OkHttpClient client = new OkHttpClient();
+        Request request = new Request.Builder().url(downloadUrl).build();
+        long contentLength = 0;
+        try {
+            if (android.os.Build.VERSION.SDK_INT > 9) {
+                StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
+                StrictMode.setThreadPolicy(policy);
+            }
+            Response response = client.newCall(request).execute();
+            if (response.isSuccessful()){
+                contentLength = Objects.requireNonNull(response.body()).contentLength();
+                Objects.requireNonNull(response.body()).close();
+            }
+        }catch (IOException e){
+            e.printStackTrace();
+        }
+        Log.d(TAG, String.valueOf(contentLength));
+        return contentLength;
+    }
+
+    private static final int REQUEST_EXTERNAL_STORAGE = 1;
+    private static String[] PERMISSIONS_STORAGE = {
+            Manifest.permission.READ_EXTERNAL_STORAGE,
+            Manifest.permission.WRITE_EXTERNAL_STORAGE };
+
+    public static void verifyStoragePermissions(Activity activity) {
+        // Check if we have write permission
+        int permission = ActivityCompat.checkSelfPermission(activity,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE);
+        if (permission != PackageManager.PERMISSION_GRANTED) {
+            // We don't have permission so prompt the user
+            ActivityCompat.requestPermissions(activity, PERMISSIONS_STORAGE,
+                    REQUEST_EXTERNAL_STORAGE);
+        }
     }
 }

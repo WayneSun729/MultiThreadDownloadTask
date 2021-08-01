@@ -1,9 +1,12 @@
 package com.wayne.myapplication;
 
+/**
+ * @author Wayne
+ */
 public class DataManager {
     private static String savePath,URL,fileName;
 
-    private static long fileSize;
+    private static long fileSize,downloadLength;
 
     private static int threadNum = 5;
 
@@ -69,5 +72,13 @@ public class DataManager {
 
     public static void setFileName(String fileName) {
         DataManager.fileName = fileName;
+    }
+
+    public static long getDownloadLength() {
+        return downloadLength;
+    }
+
+    public static void setDownloadLength(long downloadLength) {
+        DataManager.downloadLength = downloadLength;
     }
 }

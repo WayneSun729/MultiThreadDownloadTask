@@ -31,15 +31,15 @@ public class DownloadThread extends Thread{
     /**缓存的FIle*/
     private File file;
     /**开始位置*/
-    private int startPosition;
+    private long startPosition;
     /**结束位置*/
     private long endPosition;
     /**当前位置*/
-    private int curPosition;
+    private long curPosition;
     /**完成*/
     private boolean finished = false;
     /**已经下载多少*/
-    private int downloadSize = 0;
+    private long downloadSize;
 
     public int nowNumProgress;
 
@@ -69,7 +69,7 @@ public class DownloadThread extends Thread{
         this.blockSize = blockSize;
         this.ThreadNo = ThreadNo;
         this.file = targetFile;
-        Log.e(TAG, toString());
+        downloadSize = blockSize * ThreadNo;
     }
 
     @Override
@@ -133,7 +133,9 @@ public class DownloadThread extends Thread{
                 }
             }
         });
-        sendMessage(DataManager.getDownloadSuccess());
+        if (ThreadNo==4){
+            sendMessage(DataManager.getDownloadSuccess());
+        }
     }
 
 
