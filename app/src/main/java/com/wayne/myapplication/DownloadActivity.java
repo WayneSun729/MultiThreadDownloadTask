@@ -118,7 +118,7 @@ public class DownloadActivity extends AppCompatActivity {
                 }
                 if (DataManager.getFileSize() == 0) {
                     sendMessage(DOWNLOAD_FAIL);
-                }else if (DataManager.getFileSize() == DataManager.getDownloadLength()-1 ){
+                }else if (DataManager.getFileSize() == DataManager.getDownloadLength()){
                     sendMessage(DOWNLOAD_SUCCESS);
                 }else {
                     Log.d(TAG, "下载文件大小"+DataManager.getFileSize());
