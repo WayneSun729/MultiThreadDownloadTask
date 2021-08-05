@@ -1,22 +1,20 @@
 package com.wayne.myapplication;
 
+import java.util.List;
+
 /**
  * @author Wayne
  */
 public class DataManager {
+
     private static String savePath,URL,fileName;
-
     private static long fileSize,downloadLength;
-
     private static int threadNum = 5;
-
     private static final int UPDATE_TEXT = 1;
-
     private static final int DOWNLOAD_SUCCESS = 2;
-
     private static final int DOWNLOAD_FAIL = 3;
-
     private static final int DOWNLOAD_PROGRESS = 4;
+    private static List<DownloadThread> downloadThreads;
 
     public static int getUpdateText() {
         return UPDATE_TEXT;
@@ -80,5 +78,13 @@ public class DataManager {
 
     public static void setDownloadLength(long downloadLength) {
         DataManager.downloadLength = downloadLength;
+    }
+
+    public static List<DownloadThread> getDownloadThreads() {
+        return downloadThreads;
+    }
+
+    public static void setDownloadThreads(List<DownloadThread> downloadThreads) {
+        DataManager.downloadThreads = downloadThreads;
     }
 }

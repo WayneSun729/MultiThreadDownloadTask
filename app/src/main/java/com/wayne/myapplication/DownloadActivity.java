@@ -44,17 +44,12 @@ import okhttp3.Response;
 public class DownloadActivity extends AppCompatActivity {
 
     private TextView textView;
-
-    private String responseData;
-
+    private RecyclerView recyclerView;
+    private Button btnStart;
     private final int UPDATE_TEXT = 1;
-
     private final int DOWNLOAD_SUCCESS = 2;
-
     private final int DOWNLOAD_FAIL = 3;
-
     private final int DOWNLOAD_PROGRESS = 4;
-
     private static final String TAG = "Wayne";
     /**每一个线程需要下载的大小 */
     private long blockSize;
@@ -62,15 +57,10 @@ public class DownloadActivity extends AppCompatActivity {
     private int threadNum = 5;
     /*** 文件大小 */
     private long fileSize;
-
     private int numProgress = 0;
-
     private ProgressBar progressBar;
-
     private File file;
-
     private List<MyHandler> myHandlerList = new ArrayList<>();
-
     private Handler handler = new Handler(){
         @Override
         public void handleMessage(@NonNull @NotNull Message msg) {
@@ -87,7 +77,6 @@ public class DownloadActivity extends AppCompatActivity {
         }
     };
 
-    RecyclerView recyclerView;
 
     private static final ExecutorService threadPoolExecutor = new ThreadPoolExecutor(
             DataManager.getThreadNum(),
@@ -104,8 +93,7 @@ public class DownloadActivity extends AppCompatActivity {
         setContentView(R.layout.activity_download);
         textView = findViewById(R.id.textView);
         progressBar = findViewById(R.id.progressBar);
-
-        Button btnStart = findViewById(R.id.btn_start);
+        btnStart = findViewById(R.id.btn_start);
         btnStart.setOnClickListener(v ->{
             try {
                 DataManager.setFileSize(getContentLength(DataManager.getURL()));
@@ -134,7 +122,6 @@ public class DownloadActivity extends AppCompatActivity {
         recyclerView.setLayoutManager(layoutManager);
         DownloadThreadAdapter downloadThreadAdapter = new DownloadThreadAdapter();
         recyclerView.setAdapter(downloadThreadAdapter);
-
         initMyHandlerList();
     }
 
@@ -144,11 +131,6 @@ public class DownloadActivity extends AppCompatActivity {
             handler.setId(i);
             myHandlerList.add(handler);
         }
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
     }
 
     private void download(File file) throws IOException{
@@ -177,8 +159,13 @@ public class DownloadActivity extends AppCompatActivity {
                 blockSize = ((fileSize % threadNum) == 0) ? (fileSize / threadNum) : (fileSize / threadNum + 1);
                 Log.e(TAG, "每个线程分别下载 ：" + blockSize);
                 try {
+                    List<DownloadThread> threads = new ArrayList<>();
                     for (int i = 0; i < DataManager.getThreadNum(); i++) {
-                        threadPoolExecutor.execute(new DownloadThread(myHandlerList.get(i),blockSize,i,file));
+                        threads.add(new DownloadThread(myHandlerList.get(i),blockSize,i,file));
+                    }
+                    DataManager.setDownloadThreads(threads);
+                    for (int i = 0; i < DataManager.getThreadNum(); i++) {
+                        threadPoolExecutor.execute(threads.get(i));
                     }
                 } catch (InterruptedException e) {
                     e.printStackTrace();
@@ -208,10 +195,8 @@ public class DownloadActivity extends AppCompatActivity {
         Request request = new Request.Builder().url(downloadUrl).build();
         long contentLength = 0;
         try {
-            if (android.os.Build.VERSION.SDK_INT > 9) {
-                StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
-                StrictMode.setThreadPolicy(policy);
-            }
+            StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
+            StrictMode.setThreadPolicy(policy);
             Response response = client.newCall(request).execute();
             if (response.isSuccessful()){
                 contentLength = Objects.requireNonNull(response.body()).contentLength();

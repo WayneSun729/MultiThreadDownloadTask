@@ -1,6 +1,5 @@
 package com.wayne.myapplication;
 
-import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
 
@@ -8,11 +7,8 @@ import org.jetbrains.annotations.NotNull;
 
 import java.io.BufferedInputStream;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.RandomAccessFile;
-import java.net.URL;
 import java.util.Objects;
 
 import okhttp3.Call;
@@ -24,7 +20,7 @@ import okhttp3.Response;
 /**
  * @author sunbowen
  */
-public class DownloadThread extends Thread{
+public class DownloadThread implements Runnable{
 
     private static final int BUFF_SIZE = 2048;
 
@@ -169,9 +165,4 @@ public class DownloadThread extends Thread{
         handler.sendMessage(msg);
     }
 
-
-//    private void download() {
-
-
-//    }
 }
