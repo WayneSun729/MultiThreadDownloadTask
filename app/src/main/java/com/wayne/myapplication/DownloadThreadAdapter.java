@@ -1,11 +1,13 @@
 package com.wayne.myapplication;
 
+import android.content.Intent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
+import androidx.annotation.IdRes;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -15,14 +17,14 @@ import org.jetbrains.annotations.NotNull;
  * @author sunbowen
  */
 public class DownloadThreadAdapter extends RecyclerView.Adapter<DownloadThreadAdapter.ViewHolder> {
+    int id;
 
-    class ViewHolder extends RecyclerView.ViewHolder {
+    class ViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener{
 
         TextView itemTextView;
-
         TextView progressTextView;
-
         ProgressBar progressBar;
+
 
         public ViewHolder(@NonNull @NotNull View itemView) {
             super(itemView);
@@ -30,7 +32,19 @@ public class DownloadThreadAdapter extends RecyclerView.Adapter<DownloadThreadAd
             progressTextView = itemView.findViewById(R.id.progressTextView);
             progressBar = itemView.findViewById(R.id.progressBar);
         }
+
+        @Override
+        public void onClick(View v) {
+            if (!DataManager.getDownloadThreads().get(id).getFinished()){
+                Intent intent = new Intent("ControlThread");
+                intent.setPackage(MyApplication.getContext().getPackageName());
+                intent.putExtra("id",id);
+                intent.putExtra("singleOrAll", DataManager.FLAG_SINGLE_CONTROL);
+                MyApplication.getContext().sendBroadcast(intent);
+            }
+        }
     }
+
     @NonNull
     @NotNull
     @Override
@@ -42,6 +56,7 @@ public class DownloadThreadAdapter extends RecyclerView.Adapter<DownloadThreadAd
     @Override
     public void onBindViewHolder(@NonNull @NotNull DownloadThreadAdapter.ViewHolder holder, int position) {
          holder.itemTextView.setText(String.valueOf(position));
+        id = position;
     }
 
     @Override

@@ -36,13 +36,10 @@ public class DownloadThread implements Runnable{
     private boolean finished = false;
     /**已经下载多少*/
     private long downloadSize;
-
     public int nowNumProgress;
-
     private static final String TAG = "Wayne";
     /**每一个线程需要下载的大小 */
     private long blockSize;
-
     /**线程编号*/
     private int ThreadNo;
     /**下载的百分比*/
@@ -53,6 +50,8 @@ public class DownloadThread implements Runnable{
     private int usedTime = 0;
     /**当前时间*/
     private long curTime;
+    //状态标志
+    private boolean running;
 
     private DownloadActivity.MyHandler handler ;
 
@@ -66,10 +65,12 @@ public class DownloadThread implements Runnable{
         this.ThreadNo = ThreadNo;
         this.file = targetFile;
         downloadSize = blockSize * ThreadNo;
+        running = false;
     }
 
     @Override
     public void run() {
+        running = true;
         long curThreadEndPosition = (ThreadNo+1) != DataManager.getThreadNum() ? ((ThreadNo+1)*blockSize-1) : (DataManager.getFileSize() - 1);
         endPosition  = curThreadEndPosition;
         byte[] buf = new byte[BUFF_SIZE];
@@ -87,7 +88,6 @@ public class DownloadThread implements Runnable{
                 //
                 sendMessage(DataManager.getDownloadFail());
             }
-
             @Override
             public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
                 RandomAccessFile rAccessFile = new RandomAccessFile(file, "rwd");//读写
@@ -145,6 +145,7 @@ public class DownloadThread implements Runnable{
                         //关闭流
                         bis.close();
                         rAccessFile.close();
+                        running = false;
                     } catch (IOException e) {
                         Log.e("AccessFile", "AccessFile IOException " + e.getMessage());
                     }
@@ -153,8 +154,7 @@ public class DownloadThread implements Runnable{
         });
 
     }
-
-
+    
     /**
      * 发送消息，用户提示
      * */
@@ -165,4 +165,19 @@ public class DownloadThread implements Runnable{
         handler.sendMessage(msg);
     }
 
+    public boolean getRunning() {
+        return running;
+    }
+
+    public void setRunning(boolean running) {
+        this.running = running;
+    }
+
+    public boolean getFinished() {
+        return finished;
+    }
+
+    public void setFinished(boolean finished) {
+        this.finished = finished;
+    }
 }

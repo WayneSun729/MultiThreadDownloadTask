@@ -1,5 +1,6 @@
 package com.wayne.myapplication;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -14,7 +15,17 @@ public class DataManager {
     private static final int DOWNLOAD_SUCCESS = 2;
     private static final int DOWNLOAD_FAIL = 3;
     private static final int DOWNLOAD_PROGRESS = 4;
-    private static List<DownloadThread> downloadThreads;
+    public static final int FLAG_SINGLE_CONTROL = 0;
+    public static final int FLAG_ALL_CONTROL = 1;
+    public static final int FLAG_ALL_START= 0;
+    public static final int FLAG_ALL_PAUSE = 1;
+    public static final int STATUS_NEW= -1;
+    public static final int STATUS_START= 0;
+    public static final int STATUS_PAUSE = 1;
+    public static final int STATUS_FINISH = 2;
+    private static int threadsStatus = STATUS_NEW;
+
+    private static List<DownloadThread> downloadThreads = new ArrayList<>();
 
     public static int getUpdateText() {
         return UPDATE_TEXT;
@@ -86,5 +97,13 @@ public class DataManager {
 
     public static void setDownloadThreads(List<DownloadThread> downloadThreads) {
         DataManager.downloadThreads = downloadThreads;
+    }
+
+    public static int getThreadsStatus() {
+        return threadsStatus;
+    }
+
+    public static void setThreadsStatus(int threadsStatus) {
+        DataManager.threadsStatus = threadsStatus;
     }
 }
