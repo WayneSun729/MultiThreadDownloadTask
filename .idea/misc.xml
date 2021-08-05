@@ -1,4 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
+  <component name="DesignSurface">
+    <option name="filePathToZoomLevelMap">
+      <map>
+        <entry key="..\:/AndroidStudioProjects/Task/MultiThreadDownloadTask/app/src/main/res/layout/activity_download.xml" value="0.12335359675785208" />
+        <entry key="..\:/AndroidStudioProjects/Task/MultiThreadDownloadTask/app/src/main/res/layout/activity_main.xml" value="0.25" />
+        <entry key="..\:/AndroidStudioProjects/Task/MultiThreadDownloadTask/app/src/main/res/layout/thread_view_item.xml" value="0.12335359675785208" />
+      </map>
+    </option>
+  </component>
   <component name="ProjectRootManager" version="2" languageLevel="JDK_11" default="true" project-jdk-name="11" project-jdk-type="JavaSDK" />
 </project>

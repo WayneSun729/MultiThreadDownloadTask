@@ -42,13 +42,11 @@ public class DownloadThreadAdapter extends RecyclerView.Adapter<DownloadThreadAd
     @Override
     public void onBindViewHolder(@NonNull @NotNull DownloadThreadAdapter.ViewHolder holder, int position) {
          holder.itemTextView.setText(String.valueOf(position));
-
     }
 
     @Override
     public int getItemCount() {
-        return 0;
+        return DataManager.getThreadNum();
     }
-
 
 }
