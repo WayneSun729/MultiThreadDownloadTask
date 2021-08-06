@@ -5,6 +5,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
@@ -14,36 +15,44 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import org.jetbrains.annotations.NotNull;
 
+import java.util.logging.Logger;
+
 /**
  * @author sunbowen
  */
 public class DownloadThreadAdapter extends RecyclerView.Adapter<DownloadThreadAdapter.ViewHolder> {
-    int id;
+
 
     class ViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener{
 
         TextView itemTextView;
         TextView progressTextView;
         ProgressBar progressBar;
+        int id;
 
+//        Button button;
 
         public ViewHolder(@NonNull @NotNull View itemView) {
             super(itemView);
             itemTextView = itemView.findViewById(R.id.itemTextView);
             progressTextView = itemView.findViewById(R.id.progressTextView);
             progressBar = itemView.findViewById(R.id.progressBar);
+            itemView.setOnClickListener(this);
+//            button = itemView.findViewById(R.id.btnPauseAndRestart);
+//            button.setOnClickListener(v ->{
+//
+//            });
         }
 
         @Override
         public void onClick(View v) {
-            if (!DataManager.getDownloadThreads().get(id).getFinished()){
-                Intent intent = new Intent("ControlThread");
-                intent.setPackage(MyApplication.getContext().getPackageName());
-                intent.putExtra("id",id);
-                intent.putExtra("singleOrAll", DataManager.FLAG_SINGLE_CONTROL);
-                MyApplication.getContext().sendBroadcast(intent);
-                Log.d("Wayne", "暂停id为的线程"+id);
-            }
+            id = Integer.parseInt(itemTextView.getText().toString());
+            Intent intent = new Intent("com.wayne.myapplication.MY_BROADCAST");
+            intent.setPackage(MyApplication.getContext().getPackageName());
+            intent.putExtra("id",id);
+            intent.putExtra("singleOrAll", DataManager.FLAG_SINGLE_CONTROL);
+            MyApplication.getContext().sendBroadcast(intent);
+            Log.d("Wayne", "暂停id为的线程"+id);
         }
     }
 
@@ -58,7 +67,6 @@ public class DownloadThreadAdapter extends RecyclerView.Adapter<DownloadThreadAd
     @Override
     public void onBindViewHolder(@NonNull @NotNull DownloadThreadAdapter.ViewHolder holder, int position) {
         holder.itemTextView.setText(String.valueOf(position));
-        id = holder.getPosition();
     }
 
     @Override

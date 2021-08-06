@@ -126,12 +126,11 @@ public class DownloadThread implements Runnable{
                             downloadSize += len;
                         }
                     }
-                    finished = true;  //当前阶段下载完成
                     if (running){
                         Log.e(TAG, "当前线程" + ThreadNo + "下载完成");
                         if (downloadSize==DataManager.getFileSize()){
                             sendMessage(DataManager.getUpdateText());
-
+                            finished = true;  //当前任务下载完成
                         }
                     }else {
                         Log.e(TAG, "当前线程" + ThreadNo + "停止下载");

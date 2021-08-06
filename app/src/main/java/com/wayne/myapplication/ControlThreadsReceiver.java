@@ -3,7 +3,6 @@ package com.wayne.myapplication;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.util.Log;
 import android.widget.Toast;
 
 import java.io.File;
@@ -14,8 +13,6 @@ public class ControlThreadsReceiver extends BroadcastReceiver {
     public void onReceive(Context context, Intent intent) {
         int flag = intent.getIntExtra("singleOrAll", -1);
         int status = intent.getIntExtra("status", -1);
-        Log.e("Wayne", "flag="+flag);
-        Log.e("Wayne", "status="+status);
         if (flag == DataManager.FLAG_SINGLE_CONTROL){
             int id = intent.getIntExtra("id", -1);
             DownloadThread thread = DataManager.getDownloadThreads().get(id);
@@ -29,9 +26,22 @@ public class ControlThreadsReceiver extends BroadcastReceiver {
             if (status == DataManager.STATUS_NEW){
                 DataManager.setThreadsStatus(DataManager.STATUS_START);
             }else if (status == DataManager.STATUS_START){
+                for (int i = 0; i < DataManager.getThreadNum(); i++) {
+                    if (DataManager.getDownloadThreads().get(i).getRunning()){
+                        break;
+                    }
+                    if (i==DataManager.getThreadNum()-1){
+                        for (DownloadThread downloadThread : DataManager.getDownloadThreads()) {
+                            downloadThread.setRunning(true);
+                            DataManager.getThreadPoolExecutor().execute(downloadThread);
+                        }
+                    }
+                }
                 DataManager.setThreadsStatus(DataManager.STATUS_PAUSE);
                 for (DownloadThread downloadThread : DataManager.getDownloadThreads()) {
-                    downloadThread.setRunning(false);
+                    if (downloadThread.getRunning()){
+                        downloadThread.setRunning(false);
+                    }
                 }
             }else if (status == DataManager.STATUS_PAUSE) {
                 DataManager.setThreadsStatus(DataManager.STATUS_START);

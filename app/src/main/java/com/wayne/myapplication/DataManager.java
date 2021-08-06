@@ -38,7 +38,7 @@ public class DataManager {
             TimeUnit.MILLISECONDS,
             new LinkedBlockingQueue<>(1024),
             new DownloadThreadFactory(),
-            new ThreadPoolExecutor.AbortPolicy());
+            new ThreadPoolExecutor.DiscardOldestPolicy());
     private static SharedPreferences sp;
     private static List<DownloadThread> downloadThreads = new ArrayList<>();
     private static File targetFile;
