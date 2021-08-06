@@ -1,5 +1,7 @@
 package com.wayne.myapplication;
 
+import android.content.SharedPreferences;
+import android.content.SharedPreferences.Editor;
 import android.os.Message;
 import android.util.Log;
 
@@ -34,25 +36,19 @@ public class DownloadThread implements Runnable{
     private long curPosition;
     /**完成*/
     private boolean finished = false;
-    /**已经下载多少*/
+    /**整个文件已经下载多少*/
     private long downloadSize;
-
-    public int nowNumProgress;
-
     private static final String TAG = "Wayne";
     /**每一个线程需要下载的大小 */
     private long blockSize;
-
     /**线程编号*/
     private int ThreadNo;
-    /**下载的百分比*/
-    private int downloadPercent = 0;
-    /**下载的 平均速度*/
-    private int downloadSpeed = 0;
-    /**下载用的时间*/
-    private int usedTime = 0;
-    /**当前时间*/
-    private long curTime;
+    //状态标志
+    private boolean running;
+    //本线程已下载的大小
+    long sum = 0;
+    //总共要下载的大小
+    long total;
 
     private DownloadActivity.MyHandler handler ;
 
@@ -66,14 +62,18 @@ public class DownloadThread implements Runnable{
         this.ThreadNo = ThreadNo;
         this.file = targetFile;
         downloadSize = blockSize * ThreadNo;
+        running = false;
     }
 
     @Override
     public void run() {
-        long curThreadEndPosition = (ThreadNo+1) != DataManager.getThreadNum() ? ((ThreadNo+1)*blockSize-1) : (DataManager.getFileSize() - 1);
-        endPosition  = curThreadEndPosition;
+        running = true;
+        Editor editor = DataManager.getSp().edit();
+        SharedPreferences sp = DataManager.getSp();
+        startPosition = sp.getLong(ThreadNo+"startPosition", downloadSize);
+        endPosition = sp.getLong(ThreadNo+"endPosition", (ThreadNo+1) != DataManager.getThreadNum() ? ((ThreadNo+1)*blockSize-1) : (DataManager.getFileSize() - 1));
+        curPosition = sp.getLong(ThreadNo+"curPosition", startPosition);
         byte[] buf = new byte[BUFF_SIZE];
-        startPosition = downloadSize;
         OkHttpClient okHttpClient = new OkHttpClient();
         Request request = new Request.Builder()
                 .get()
@@ -87,16 +87,11 @@ public class DownloadThread implements Runnable{
                 //
                 sendMessage(DataManager.getDownloadFail());
             }
-
             @Override
             public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
                 RandomAccessFile rAccessFile = new RandomAccessFile(file, "rwd");//读写
                 BufferedInputStream bis = new BufferedInputStream(Objects.requireNonNull(response.body()).byteStream(), BUFF_SIZE);
                 try {
-                    //本线程已下载的大小
-                    long sum = 0;
-                    //总共要下载的大小
-                    long total;
                     if (ThreadNo != DataManager.getThreadNum()-1){
                         total = blockSize;
                     }else{
@@ -104,18 +99,15 @@ public class DownloadThread implements Runnable{
                     }
                     //设置从什么位置开始写入数据
                     rAccessFile.seek(startPosition);
-                    curPosition = startPosition;
                     while (curPosition < endPosition)  //当前位置小于结束位置  继续下载
                     {
                         int len = bis.read(buf, 0, BUFF_SIZE);
                         if (len == -1) {  //下载完成
                             break;
                         }
-//                        else if (len < DataManager.getFileSize() - total) {  //
-//                            len = (int) (DataManager.getFileSize() - total);
-//                            rAccessFile.write(buf, 0, len);
-//                            break;
-//                        }
+                        if (!running){
+                            break;
+                        }
                         rAccessFile.write(buf, 0, len);
                         curPosition = curPosition + len;
                         sum+=len;
@@ -127,16 +119,26 @@ public class DownloadThread implements Runnable{
                             System.out.println("  curPosition > endPosition  !!!!");
                             long extraLen = curPosition - endPosition;
                             downloadSize += (len - extraLen + 1);
-
+                            curPosition=endPosition;
                         } else {
                             downloadSize += len;
                         }
                     }
                     finished = true;  //当前阶段下载完成
-                    Log.e(TAG, "当前线程" + ThreadNo + "下载完成");
-                    if (ThreadNo==4){
+                    if (running){
+                        Log.e(TAG, "当前线程" + ThreadNo + "下载完成");
+                    }else {
+                        Log.e(TAG, "当前线程" + ThreadNo + "停止下载");
+                        editor.putBoolean(String.valueOf(ThreadNo), true);
+                        editor.putLong(ThreadNo+"startPosition", startPosition);
+                        editor.putLong(ThreadNo+"endPosition", endPosition);
+                        editor.putLong(ThreadNo+"curPosition", curPosition);
+                        editor.apply();
+                    }
+                    if (downloadSize==DataManager.getFileSize()){
                         sendMessage(DataManager.getUpdateText());
                     }
+
                 } catch (Exception e) {
                     Log.e(TAG, "download error Exception " + e.getMessage());
                     e.printStackTrace();
@@ -145,16 +147,15 @@ public class DownloadThread implements Runnable{
                         //关闭流
                         bis.close();
                         rAccessFile.close();
+                        running = false;
                     } catch (IOException e) {
                         Log.e("AccessFile", "AccessFile IOException " + e.getMessage());
                     }
                 }
             }
         });
-
     }
-
-
+    
     /**
      * 发送消息，用户提示
      * */
@@ -163,6 +164,22 @@ public class DownloadThread implements Runnable{
         Message msg = new Message();
         msg.what = what;
         handler.sendMessage(msg);
+    }
+
+    public boolean getRunning() {
+        return running;
+    }
+
+    public void setRunning(boolean running) {
+        this.running = running;
+    }
+
+    public boolean getFinished() {
+        return finished;
+    }
+
+    public void setFinished(boolean finished) {
+        this.finished = finished;
     }
 
 }

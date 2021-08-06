@@ -2,6 +2,8 @@ package com.wayne.myapplication;
 
 import android.Manifest;
 import android.app.Activity;
+import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Handler;
@@ -76,16 +78,12 @@ public class DownloadActivity extends AppCompatActivity {
             }
         }
     };
+    private static final int REQUEST_EXTERNAL_STORAGE = 1;
+    private static String[] PERMISSIONS_STORAGE = {
+            Manifest.permission.READ_EXTERNAL_STORAGE,
+            Manifest.permission.WRITE_EXTERNAL_STORAGE };
 
 
-    private static final ExecutorService threadPoolExecutor = new ThreadPoolExecutor(
-            DataManager.getThreadNum(),
-            DataManager.getThreadNum(),
-            0L,
-            TimeUnit.MILLISECONDS,
-            new LinkedBlockingQueue<>(1024),
-            new DownloadThreadFactory(),
-            new ThreadPoolExecutor.AbortPolicy());
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -96,22 +94,31 @@ public class DownloadActivity extends AppCompatActivity {
         btnStart = findViewById(R.id.btn_start);
         btnStart.setOnClickListener(v ->{
             try {
-                DataManager.setFileSize(getContentLength(DataManager.getURL()));
-                fileSize = DataManager.getFileSize();
-                //只创建一个文件，file下载内容
-                file = new File(DataManager.getSavePath() +  DataManager.getFileName());
-                Log.e(TAG, "文件一共：" + fileSize + " savePath " + DataManager.getSavePath() + "  fileName  " + DataManager.getFileName());
-                if (file.exists()){
-                    DataManager.setDownloadLength(file.length());
-                }
-                if (DataManager.getFileSize() == 0) {
-                    sendMessage(DOWNLOAD_FAIL);
-                }else if (DataManager.getFileSize() == DataManager.getDownloadLength()){
-                    sendMessage(DOWNLOAD_SUCCESS);
-                }else {
-                    Log.d(TAG, "下载文件大小"+DataManager.getFileSize());
-                    Log.d(TAG, "本地文件大小"+DataManager.getDownloadLength());
-                    download(file);
+                SharedPreferences sharedPreferences = getSharedPreferences("DownloadData",MODE_PRIVATE);
+                DataManager.setSp(sharedPreferences);
+                Intent intent = new Intent("com.wayne.myapplication.MY_BROADCAST");
+                intent.setPackage(getPackageName());
+                intent.putExtra("singleOrAll",DataManager.FLAG_ALL_CONTROL);
+                intent.putExtra("status", DataManager.getThreadsStatus());
+                sendBroadcast(intent);
+                if (DataManager.getThreadsStatus() == DataManager.STATUS_NEW){
+                    DataManager.setFileSize(getContentLength(DataManager.getURL()));
+                    fileSize = DataManager.getFileSize();
+                    //只创建一个文件，file下载内容
+                    file = new File(DataManager.getSavePath() +  DataManager.getFileName());
+                    Log.e(TAG, "文件一共：" + fileSize + " savePath " + DataManager.getSavePath() + "  fileName  " + DataManager.getFileName());
+                    if (file.exists()){
+                        DataManager.setDownloadLength(file.length());
+                    }
+                    if (DataManager.getFileSize() == 0) {
+                        sendMessage(DOWNLOAD_FAIL);
+                    }else if (DataManager.getFileSize() == DataManager.getDownloadLength()){
+                        sendMessage(DOWNLOAD_SUCCESS);
+                    }else {
+                        Log.d(TAG, "下载文件大小"+DataManager.getFileSize());
+                        Log.d(TAG, "本地文件大小"+DataManager.getDownloadLength());
+                        download(file);
+                    }
                 }
             } catch (IOException e) {
                 e.printStackTrace();
@@ -146,7 +153,6 @@ public class DownloadActivity extends AppCompatActivity {
             public void onFailure(@NotNull Call call, @NotNull IOException e) {
                 sendMessage(DOWNLOAD_FAIL);
             }
-
             @Override
             public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
                 DataManager.setFileSize(Objects.requireNonNull(response.body()).contentLength());
@@ -159,13 +165,12 @@ public class DownloadActivity extends AppCompatActivity {
                 blockSize = ((fileSize % threadNum) == 0) ? (fileSize / threadNum) : (fileSize / threadNum + 1);
                 Log.e(TAG, "每个线程分别下载 ：" + blockSize);
                 try {
-                    List<DownloadThread> threads = new ArrayList<>();
+                    List<DownloadThread> threads = DataManager.getDownloadThreads();
                     for (int i = 0; i < DataManager.getThreadNum(); i++) {
                         threads.add(new DownloadThread(myHandlerList.get(i),blockSize,i,file));
                     }
-                    DataManager.setDownloadThreads(threads);
                     for (int i = 0; i < DataManager.getThreadNum(); i++) {
-                        threadPoolExecutor.execute(threads.get(i));
+                        DataManager.getThreadPoolExecutor().execute(threads.get(i));
                     }
                 } catch (InterruptedException e) {
                     e.printStackTrace();
@@ -187,7 +192,7 @@ public class DownloadActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        threadPoolExecutor.shutdown();
+        DataManager.getThreadPoolExecutor().shutdown();
     }
 
     private long getContentLength(String downloadUrl){
@@ -208,11 +213,6 @@ public class DownloadActivity extends AppCompatActivity {
         Log.d(TAG, String.valueOf(contentLength));
         return contentLength;
     }
-
-    private static final int REQUEST_EXTERNAL_STORAGE = 1;
-    private static String[] PERMISSIONS_STORAGE = {
-            Manifest.permission.READ_EXTERNAL_STORAGE,
-            Manifest.permission.WRITE_EXTERNAL_STORAGE };
 
     public static void verifyStoragePermissions(Activity activity) {
         // Check if we have write permission
@@ -236,9 +236,11 @@ public class DownloadActivity extends AppCompatActivity {
                 switch (msg.what){
                     case UPDATE_TEXT:
                         showResponse("下载完成");
+                        DataManager.setThreadsStatus(DataManager.STATUS_FINISH);
                         break;
                     case DOWNLOAD_SUCCESS:
                         viewHolder.progressTextView.setText("下载成功");
+                        DataManager.setThreadsStatus(DataManager.STATUS_FINISH);
                         break;
                     case DOWNLOAD_FAIL:
                         viewHolder.progressTextView.setText("下载失败");
@@ -255,7 +257,6 @@ public class DownloadActivity extends AppCompatActivity {
             }catch (NullPointerException id){
                 Toast.makeText(getApplicationContext(), "出错了。。", Toast.LENGTH_SHORT).show();
             }
-
         }
 
         public void setId(int id) {
@@ -266,5 +267,4 @@ public class DownloadActivity extends AppCompatActivity {
             this.nowProgress = nowProgress;
         }
     }
-
 }
