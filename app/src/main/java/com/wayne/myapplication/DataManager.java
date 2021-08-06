@@ -2,6 +2,7 @@ package com.wayne.myapplication;
 
 import android.content.SharedPreferences;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -40,6 +41,7 @@ public class DataManager {
             new ThreadPoolExecutor.AbortPolicy());
     private static SharedPreferences sp;
     private static List<DownloadThread> downloadThreads = new ArrayList<>();
+    private static File targetFile;
 
     public static int getUpdateText() {
         return UPDATE_TEXT;
@@ -131,5 +133,13 @@ public class DataManager {
 
     public static void setSp(SharedPreferences Sp) {
         sp = Sp;
+    }
+
+    public static File getTargetFile() {
+        return targetFile;
+    }
+
+    public static void setTargetFile(File targetFile) {
+        DataManager.targetFile = targetFile;
     }
 }

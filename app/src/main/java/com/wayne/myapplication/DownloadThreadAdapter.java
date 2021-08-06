@@ -1,6 +1,7 @@
 package com.wayne.myapplication;
 
 import android.content.Intent;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -41,6 +42,7 @@ public class DownloadThreadAdapter extends RecyclerView.Adapter<DownloadThreadAd
                 intent.putExtra("id",id);
                 intent.putExtra("singleOrAll", DataManager.FLAG_SINGLE_CONTROL);
                 MyApplication.getContext().sendBroadcast(intent);
+                Log.d("Wayne", "暂停id为的线程"+id);
             }
         }
     }
@@ -55,8 +57,8 @@ public class DownloadThreadAdapter extends RecyclerView.Adapter<DownloadThreadAd
 
     @Override
     public void onBindViewHolder(@NonNull @NotNull DownloadThreadAdapter.ViewHolder holder, int position) {
-         holder.itemTextView.setText(String.valueOf(position));
-        id = position;
+        holder.itemTextView.setText(String.valueOf(position));
+        id = holder.getPosition();
     }
 
     @Override

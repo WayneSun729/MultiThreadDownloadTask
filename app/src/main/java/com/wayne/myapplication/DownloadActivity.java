@@ -4,6 +4,7 @@ import android.Manifest;
 import android.app.Activity;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.SharedPreferences.Editor;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Handler;
@@ -59,9 +60,6 @@ public class DownloadActivity extends AppCompatActivity {
     private int threadNum = 5;
     /*** 文件大小 */
     private long fileSize;
-    private int numProgress = 0;
-    private ProgressBar progressBar;
-    private File file;
     private List<MyHandler> myHandlerList = new ArrayList<>();
     private Handler handler = new Handler(){
         @Override
@@ -90,7 +88,6 @@ public class DownloadActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_download);
         textView = findViewById(R.id.textView);
-        progressBar = findViewById(R.id.progressBar);
         btnStart = findViewById(R.id.btn_start);
         btnStart.setOnClickListener(v ->{
             try {
@@ -105,11 +102,8 @@ public class DownloadActivity extends AppCompatActivity {
                     DataManager.setFileSize(getContentLength(DataManager.getURL()));
                     fileSize = DataManager.getFileSize();
                     //只创建一个文件，file下载内容
-                    file = new File(DataManager.getSavePath() +  DataManager.getFileName());
+                    DataManager.setTargetFile(new File(DataManager.getSavePath() +  DataManager.getFileName()));
                     Log.e(TAG, "文件一共：" + fileSize + " savePath " + DataManager.getSavePath() + "  fileName  " + DataManager.getFileName());
-                    if (file.exists()){
-                        DataManager.setDownloadLength(file.length());
-                    }
                     if (DataManager.getFileSize() == 0) {
                         sendMessage(DOWNLOAD_FAIL);
                     }else if (DataManager.getFileSize() == DataManager.getDownloadLength()){
@@ -117,7 +111,7 @@ public class DownloadActivity extends AppCompatActivity {
                     }else {
                         Log.d(TAG, "下载文件大小"+DataManager.getFileSize());
                         Log.d(TAG, "本地文件大小"+DataManager.getDownloadLength());
-                        download(file);
+                        download(DataManager.getTargetFile());
                     }
                 }
             } catch (IOException e) {
@@ -237,6 +231,9 @@ public class DownloadActivity extends AppCompatActivity {
                     case UPDATE_TEXT:
                         showResponse("下载完成");
                         DataManager.setThreadsStatus(DataManager.STATUS_FINISH);
+                        Editor editor = DataManager.getSp().edit();
+                        editor.clear();
+                        editor.apply();
                         break;
                     case DOWNLOAD_SUCCESS:
                         viewHolder.progressTextView.setText("下载成功");
@@ -247,7 +244,7 @@ public class DownloadActivity extends AppCompatActivity {
                         break;
                     case DOWNLOAD_PROGRESS:
                         StringBuilder sb = new StringBuilder();
-                        double numPro = (double) nowProgress/100;
+                        double numPro = (double) nowProgress/10;
                         sb.append(numPro).append("%");
                         viewHolder.progressTextView.setText(sb.toString());
                         viewHolder.progressBar.setProgress(nowProgress);

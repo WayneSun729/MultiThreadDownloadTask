@@ -52,6 +52,8 @@ public class DownloadThread implements Runnable{
 
     private DownloadActivity.MyHandler handler ;
 
+    private Editor editor = DataManager.getSp().edit();
+
     /**
      * 下载的构造函数
      * @param handler   UI更新
@@ -68,11 +70,17 @@ public class DownloadThread implements Runnable{
     @Override
     public void run() {
         running = true;
-        Editor editor = DataManager.getSp().edit();
         SharedPreferences sp = DataManager.getSp();
+        //初始化下载信息
         startPosition = sp.getLong(ThreadNo+"startPosition", downloadSize);
         endPosition = sp.getLong(ThreadNo+"endPosition", (ThreadNo+1) != DataManager.getThreadNum() ? ((ThreadNo+1)*blockSize-1) : (DataManager.getFileSize() - 1));
         curPosition = sp.getLong(ThreadNo+"curPosition", startPosition);
+        if (ThreadNo != DataManager.getThreadNum()-1){
+            total = blockSize;
+        }else{
+            total = DataManager.getFileSize() - startPosition;
+        }
+        sum = curPosition-startPosition+1;
         byte[] buf = new byte[BUFF_SIZE];
         OkHttpClient okHttpClient = new OkHttpClient();
         Request request = new Request.Builder()
@@ -84,7 +92,6 @@ public class DownloadThread implements Runnable{
         call.enqueue(new Callback() {
             @Override
             public void onFailure(@NotNull Call call, @NotNull IOException e) {
-                //
                 sendMessage(DataManager.getDownloadFail());
             }
             @Override
@@ -92,13 +99,8 @@ public class DownloadThread implements Runnable{
                 RandomAccessFile rAccessFile = new RandomAccessFile(file, "rwd");//读写
                 BufferedInputStream bis = new BufferedInputStream(Objects.requireNonNull(response.body()).byteStream(), BUFF_SIZE);
                 try {
-                    if (ThreadNo != DataManager.getThreadNum()-1){
-                        total = blockSize;
-                    }else{
-                        total = DataManager.getFileSize() - downloadSize;
-                    }
                     //设置从什么位置开始写入数据
-                    rAccessFile.seek(startPosition);
+                    rAccessFile.seek(curPosition);
                     while (curPosition < endPosition)  //当前位置小于结束位置  继续下载
                     {
                         int len = bis.read(buf, 0, BUFF_SIZE);
@@ -112,7 +114,7 @@ public class DownloadThread implements Runnable{
                         curPosition = curPosition + len;
                         sum+=len;
                         double temp = (double) sum/total;
-                        temp*=10000;
+                        temp*=1000;
                         handler.setNowProgress((int) temp);
                         sendMessage(DataManager.getDownloadProgress());
                         if (curPosition > endPosition) {    //如果下载多了，则减去多余部分
@@ -127,18 +129,17 @@ public class DownloadThread implements Runnable{
                     finished = true;  //当前阶段下载完成
                     if (running){
                         Log.e(TAG, "当前线程" + ThreadNo + "下载完成");
+                        if (downloadSize==DataManager.getFileSize()){
+                            sendMessage(DataManager.getUpdateText());
+
+                        }
                     }else {
                         Log.e(TAG, "当前线程" + ThreadNo + "停止下载");
-                        editor.putBoolean(String.valueOf(ThreadNo), true);
                         editor.putLong(ThreadNo+"startPosition", startPosition);
                         editor.putLong(ThreadNo+"endPosition", endPosition);
                         editor.putLong(ThreadNo+"curPosition", curPosition);
                         editor.apply();
                     }
-                    if (downloadSize==DataManager.getFileSize()){
-                        sendMessage(DataManager.getUpdateText());
-                    }
-
                 } catch (Exception e) {
                     Log.e(TAG, "download error Exception " + e.getMessage());
                     e.printStackTrace();
@@ -155,12 +156,8 @@ public class DownloadThread implements Runnable{
             }
         });
     }
-    
-    /**
-     * 发送消息，用户提示
-     * */
-    private void sendMessage(int what)
-    {
+
+    private void sendMessage(int what) {
         Message msg = new Message();
         msg.what = what;
         handler.sendMessage(msg);

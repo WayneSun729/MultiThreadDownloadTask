@@ -6,6 +6,8 @@ import android.content.Intent;
 import android.util.Log;
 import android.widget.Toast;
 
+import java.io.File;
+
 public class ControlThreadsReceiver extends BroadcastReceiver {
 
     @Override
@@ -38,7 +40,12 @@ public class ControlThreadsReceiver extends BroadcastReceiver {
                     DataManager.getThreadPoolExecutor().execute(downloadThread);
                 }
             }else if (status == DataManager.STATUS_FINISH){
-                Toast.makeText(MyApplication.getContext(), "已经下载完成了~请不要重复下载哦~",Toast.LENGTH_SHORT).show();
+                File targetFile = DataManager.getTargetFile();
+                if (targetFile!=null&&targetFile.exists()&&targetFile.length() == DataManager.getFileSize()){
+                    Toast.makeText(MyApplication.getContext(), "已经下载完成了~请不要重复下载哦~",Toast.LENGTH_SHORT).show();
+                }else {
+                    DataManager.setThreadsStatus(DataManager.STATUS_NEW);
+                }
             }
         }
     }
